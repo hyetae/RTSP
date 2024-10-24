@@ -8,10 +8,13 @@ set(SOURCES
         main.cpp
         utils.cpp
         RequestHandler.cpp
-        SocketHandler.cpp
         MediaStreamHandler.cpp
         ClientSession.cpp
         Protos.cpp
+        TCPHandler.cpp
+        TCPHandler.h
+        UDPHandler.cpp
+        UDPHandler.h
 )
 
 # ALSA 라이브러리 찾기

@@ -1,4 +1,6 @@
 #include "RequestHandler.h"
+#include "TCPHandler.h"
+#include "UDPHandler.h"
 #include "utils.h"
 
 #include <iostream>
@@ -6,17 +8,17 @@
 #include <sstream>
 #include <thread>
 
-#define SOCK SocketHandler::getInstance()
+#define TCP TCPHandler::getInstance()
 
 using namespace std;
 
-RequestHandler::RequestHandler(MediaStreamHandler& mediaStreamHandler)
-        : mediaStreamHandler(mediaStreamHandler), isAlive(true) {}
+RequestHandler::RequestHandler(MediaStreamHandler& mediaStreamHandler, UDPHandler& udpHandler)
+        : mediaStreamHandler(mediaStreamHandler), udpHandler(udpHandler), isAlive(true) {}
 
 void RequestHandler::handleRequest(int clientSocket, ClientSession* session) {
     cout << "클라이언트 스레드 생성" << endl;
     while (isAlive) {
-        string request = SOCK.receiveRTSPRequest(clientSocket);
+        string request = TCP.receiveRTSPRequest(clientSocket);
         if (request.empty()) {
             cerr << "Invalid RTSP request received." << endl;
             return;
@@ -108,7 +110,7 @@ void RequestHandler::handleOptionsRequest(int clientSocket, int cseq) {
                            "CSeq: " + to_string(cseq) + "\r\n"
                            "Public: DESCRIBE, SETUP, TEARDOWN, PLAY, PAUSE\r\n"
                            "\r\n";
-    SOCK.sendRTSPResponse(clientSocket, response);
+    TCP.sendRTSPResponse(clientSocket, response);
 }
 
 void RequestHandler::handleDescribeRequest(int clientSocket, int cseq, ClientSession* session, const string& request) {
@@ -127,7 +129,7 @@ void RequestHandler::handleDescribeRequest(int clientSocket, int cseq, ClientSes
               "s=Audio Stream\r\n"
               "c=IN IP4 " + ip + "\r\n"
               "t=0 0\r\n"
-              "m=audio " + to_string(session->getPort().first)
+              "m=audio " + to_string(udpHandler.getUDPServerPort().first)
               + " RTP/AVP 0\r\n"
                 "a=rtpmap:0 PCMU/8000\r\n";
     } else
@@ -138,7 +140,7 @@ void RequestHandler::handleDescribeRequest(int clientSocket, int cseq, ClientSes
                 "Content-Type: application/sdp\r\n"
                 "Content-Length: " + to_string(sdp.size()) + "\r\n"
                 "\r\n" + sdp;
-    SOCK.sendRTSPResponse(clientSocket, response);
+    TCP.sendRTSPResponse(clientSocket, response);
 }
 
 void RequestHandler::handleSetupRequest(int clientSocket, int cseq, ClientSession* session, const string& request) {
@@ -150,17 +152,20 @@ void RequestHandler::handleSetupRequest(int clientSocket, int cseq, ClientSessio
         return;
     }
 
-    session->setPort(ports.first, ports.second);
+    udpHandler.setUDPPort(ports.first, ports.second);
 
     string response = "RTSP/1.0 200 OK\r\n"
                            "CSeq: " + to_string(cseq) + "\r\n"
+                           "Session: " + to_string(session->getSessionId()) + "\r\n"
                            "Transport: RTP/AVP;unicast;client_port="
-                           + to_string(session->getPort().first) + "-"
-                           + to_string(session->getPort().second) + "\r\n"
+                           + to_string(udpHandler.getUDPClientPort().first) + "-"
+                           + to_string(udpHandler.getUDPClientPort().second) + ";"
+                           "server_port=" + to_string(udpHandler.getUDPServerPort().first)
+                           + "-" + to_string(udpHandler.getUDPServerPort().second) + "\r\n"
                            "Session: " + to_string(session->getSessionId())
                            + "\r\n"
                              "\r\n";
-    SOCK.sendRTSPResponse(clientSocket, response);
+    TCP.sendRTSPResponse(clientSocket, response);
 
     thread mediaStreamThread(&MediaStreamHandler::handleMediaStream, &mediaStreamHandler);
     mediaStreamThread.detach();
@@ -174,7 +179,7 @@ void RequestHandler::handlePlayRequest(int clientSocket, int cseq, ClientSession
                            "Session: " + to_string(session->getSessionId())
                            + "\r\n"
                              "\r\n";
-    SOCK.sendRTSPResponse(clientSocket, response);
+    TCP.sendRTSPResponse(clientSocket, response);
 
     mediaStreamHandler.setCmd("PLAY");
 }
@@ -188,7 +193,7 @@ void RequestHandler::handlePauseRequest(int clientSocket, int cseq, ClientSessio
                            + "\r\n"
                              "\r\n";
 
-    SOCK.sendRTSPResponse(clientSocket, response);
+    TCP.sendRTSPResponse(clientSocket, response);
 
     mediaStreamHandler.setCmd("PAUSE");
     isAlive = false;
@@ -203,7 +208,7 @@ void RequestHandler::handleTeardownRequest(int clientSocket, int cseq, ClientSes
                            + "\r\n"
                              "\r\n";
 
-    SOCK.sendRTSPResponse(clientSocket, response);
+    TCP.sendRTSPResponse(clientSocket, response);
 
     mediaStreamHandler.setCmd("TEARDOWN");
 }

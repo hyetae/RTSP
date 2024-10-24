@@ -1,19 +1,20 @@
 #ifndef RTSP_REQUESTHANDLER_H
 #define RTSP_REQUESTHANDLER_H
 #include <string>
-#include "SocketHandler.h"
+#include "UDPHandler.h"
 #include "ClientSession.h"
 #include "MediaStreamHandler.h"
 
 class RequestHandler {
 public:
-    RequestHandler(MediaStreamHandler& mediaStreamHandler);
+    RequestHandler(MediaStreamHandler& mediaStreamHandler, UDPHandler& udpHandler);
 
     // RTSP 요청 처리
     void handleRequest(int clientSocket, ClientSession* session);
 
 private:
     MediaStreamHandler& mediaStreamHandler;
+    UDPHandler& udpHandler;
     bool isAlive;
 
     string parseMethod(const string& request);

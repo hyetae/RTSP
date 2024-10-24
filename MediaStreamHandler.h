@@ -1,7 +1,7 @@
 #ifndef RTSP_MEDIASTREAMHANDLER_H
 #define RTSP_MEDIASTREAMHANDLER_H
 
-#include "SocketHandler.h"
+#include "UDPHandler.h"
 #include <condition_variable>
 #include <atomic>
 #include <alsa/asoundlib.h>
@@ -10,7 +10,7 @@ using namespace std;
 
 class MediaStreamHandler {
 public:
-    MediaStreamHandler();
+    MediaStreamHandler(UDPHandler& udpHandler);
 
     void handleMediaStream();
 
@@ -21,6 +21,8 @@ public:
     void setCmd(const string& cmd);
 
 private:
+    UDPHandler& udpHandler;
+
     atomic<bool> isStreaming;
     atomic<bool> isPaused;
 

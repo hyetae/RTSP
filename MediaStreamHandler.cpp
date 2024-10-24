@@ -1,6 +1,5 @@
 #include "Protos.h"
 #include "utils.h"
-#include "SocketHandler.h"
 #include "MediaStreamHandler.h"
 #include <iostream>
 #include <cstdint>
@@ -12,10 +11,11 @@
 #include <mutex>
 #include <utility>
 #include <random>
-#define SOCK SocketHandler::getInstance()
+
 using namespace std;
 
-MediaStreamHandler::MediaStreamHandler(): isStreaming(false), isPaused(false) {}
+MediaStreamHandler::MediaStreamHandler(UDPHandler& udpHandler):
+        udpHandler(udpHandler), isStreaming(false), isPaused(false) {}
 
 void MediaStreamHandler::handleMediaStream() {
     Protos protos(utils::getRanNum(32));
@@ -68,7 +68,7 @@ void MediaStreamHandler::handleMediaStream() {
 
 	        cout << "RTP " << packetCount << " sent" << endl;
 
-            SOCK.sendRTPPacket(rtpPacket, sizeof(rtpPacket));
+            udpHandler.sendRTPPacket(rtpPacket, sizeof(rtpPacket));
 
             seqNum++;
             timestamp += payloadSize;
@@ -78,7 +78,7 @@ void MediaStreamHandler::handleMediaStream() {
             if (packetCount % 10 == 0) {
                 cout << "RTCP sent" << endl;
                 protos.createSR(&sr, timestamp, packetCount, octetCount);
-                SOCK.sendSenderReport(&sr, sizeof(sr));
+                udpHandler.sendSenderReport(&sr, sizeof(sr));
             }
 	    }
         this_thread::sleep_for(std::chrono::milliseconds(20));
