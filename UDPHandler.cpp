@@ -36,7 +36,7 @@ void UDPHandler::createUDPSocket() {
     socklen_t len = sizeof(serverRTPAddr);
     serverRTPPort = getsockname(rtpSocket, (struct sockaddr*)&serverRTPAddr, &len);
     if (serverRTPPort < 0) {
-        perror("getsockname failed");
+        perror("getsockname 실패");
         exit(1);
     }
     serverRTCPPort = serverRTPPort + 1;
@@ -84,7 +84,17 @@ void UDPHandler::sendRTPPacket(unsigned char* rtpPacket, size_t packetSize) {
 void UDPHandler::sendSenderReport(Protos::SenderReport* senderReport, size_t srSize) {
     int sentBytes = sendto(rtcpSocket, senderReport, srSize, 0, (struct sockaddr*)&clientRTCPAddr, sizeof(clientRTCPAddr));
     if (sentBytes == -1) {
-        cerr << "rtcp 전송 실패" << endl;
+        cerr << "sr 전송 실패" << endl;
         exit(1);
     }
+}
+
+void UDPHandler::recvReceiverReport() {
+    char buffer[1024];
+    memset(buffer, 0, sizeof(buffer));
+
+    socklen_t len = sizeof(clientRTCPAddr);
+    recvfrom(rtcpSocket, buffer, sizeof(buffer), 0, (struct sockaddr*)&clientRTCPAddr, &len);
+
+    cout << "Receiver Report:\n" << buffer << endl;
 }

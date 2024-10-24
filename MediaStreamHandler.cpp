@@ -79,6 +79,7 @@ void MediaStreamHandler::handleMediaStream() {
                 cout << "RTCP sent" << endl;
                 protos.createSR(&sr, timestamp, packetCount, octetCount);
                 udpHandler.sendSenderReport(&sr, sizeof(sr));
+                udpHandler.recvReceiverReport();
             }
 	    }
         this_thread::sleep_for(std::chrono::milliseconds(20));

@@ -12,9 +12,7 @@ set(SOURCES
         ClientSession.cpp
         Protos.cpp
         TCPHandler.cpp
-        TCPHandler.h
         UDPHandler.cpp
-        UDPHandler.h
 )
 
 # ALSA 라이브러리 찾기

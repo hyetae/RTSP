@@ -22,6 +22,7 @@ public:
 
     void sendSenderReport(Protos::SenderReport* senderReport, size_t srSize);
 
+    void recvReceiverReport();
 
 private:
     int rtpSocket;
