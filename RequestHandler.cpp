@@ -17,15 +17,20 @@ RequestHandler::RequestHandler(MediaStreamHandler& mediaStreamHandler, UDPHandle
 
 void RequestHandler::handleRequest(int clientSocket, ClientSession* session) {
     cout << "클라이언트 스레드 생성" << endl;
+
+    // 클라이언트 세션이 종료되지 않는 한 계속 반복
     while (isAlive) {
+        // RTSP 요청 기다림
         string request = TCP.receiveRTSPRequest(clientSocket);
         if (request.empty()) {
             cerr << "Invalid RTSP request received." << endl;
             return;
         }
 
+        // 메소드 파싱
         string method = parseMethod(request);
 
+        // 요청 번호 파싱
         int cseq = parseCSeq(request);
         if (cseq == -1) {
             cerr << "CSeq parsing failed." << endl;
@@ -40,8 +45,6 @@ void RequestHandler::handleRequest(int clientSocket, ClientSession* session) {
             handleSetupRequest(clientSocket, cseq, session, request);
         } else if (method == "PLAY") {
             handlePlayRequest(clientSocket, cseq, session);
-        } else if (method == "PAUSE") {
-            handlePauseRequest(clientSocket, cseq, session);
         } else if (method == "TEARDOWN") {
             handleTeardownRequest(clientSocket, cseq, session);
         } else {
@@ -146,6 +149,7 @@ void RequestHandler::handleDescribeRequest(int clientSocket, int cseq, ClientSes
 void RequestHandler::handleSetupRequest(int clientSocket, int cseq, ClientSession* session, const string& request) {
     session->setState("SETUP");
 
+    // 요청으로부터 클라이언트의 RTP, RTCP 포트 파싱
     auto ports = parsePorts(request);
     if (ports.first < 0 || ports.second < 0) {
         cerr << "클라이언트 포트가 없습니다" << endl;
@@ -167,11 +171,13 @@ void RequestHandler::handleSetupRequest(int clientSocket, int cseq, ClientSessio
                              "\r\n";
     TCP.sendRTSPResponse(clientSocket, response);
 
+    // RTP/RTCP 스레드 생성
     thread mediaStreamThread(&MediaStreamHandler::handleMediaStream, &mediaStreamHandler);
     mediaStreamThread.detach();
 }
 
 void RequestHandler::handlePlayRequest(int clientSocket, int cseq, ClientSession* session) {
+    // 세션의 현재 상태 변경
     session->setState("PLAY");
 
     string response = "RTSP/1.0 200 OK\r\n"
@@ -180,23 +186,8 @@ void RequestHandler::handlePlayRequest(int clientSocket, int cseq, ClientSession
                            + "\r\n"
                              "\r\n";
     TCP.sendRTSPResponse(clientSocket, response);
-
+    // RTP/RTCP 제어 상태 변경
     mediaStreamHandler.setCmd("PLAY");
-}
-
-void RequestHandler::handlePauseRequest(int clientSocket, int cseq, ClientSession* session) {
-    session->setState("PAUSE");
-
-    string response = "RTSP/1.0 200 OK\r\n"
-                           "CSeq: " + to_string(cseq) + "\r\n"
-                           "Session: " + to_string(session->getSessionId())
-                           + "\r\n"
-                             "\r\n";
-
-    TCP.sendRTSPResponse(clientSocket, response);
-
-    mediaStreamHandler.setCmd("PAUSE");
-    isAlive = false;
 }
 
 void RequestHandler::handleTeardownRequest(int clientSocket, int cseq, ClientSession* session) {
@@ -209,6 +200,8 @@ void RequestHandler::handleTeardownRequest(int clientSocket, int cseq, ClientSes
                              "\r\n";
 
     TCP.sendRTSPResponse(clientSocket, response);
-
+    // 반복문 종료
+    isAlive = false;
+    // RTP/RTCP 제어 상태 변경
     mediaStreamHandler.setCmd("TEARDOWN");
 }

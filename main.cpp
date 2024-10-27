@@ -24,10 +24,11 @@ int main() {
         }
         cout << "클라이언트 접속 완료" << endl;
 
+        // 클라이언트마다 아래 클래스를 가짐
         auto udpHandler = UDPHandler();
         auto mediaStreamHandler = MediaStreamHandler(udpHandler);
         auto requestHandler = RequestHandler(mediaStreamHandler, udpHandler);
-        auto clientSession = ClientSession((int)utils::getRanNum(16));
+        auto clientSession = ClientSession((int)utils::getRanNum(16)); // 세션 아이디 랜덤 할당
 
         // 클라이언트 세션을 새로운 스레드에서 처리
         thread clientThread(&RequestHandler::handleRequest, requestHandler, clientSocket, &clientSession);

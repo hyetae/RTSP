@@ -18,8 +18,10 @@ MediaStreamHandler::MediaStreamHandler(UDPHandler& udpHandler):
         udpHandler(udpHandler), isStreaming(false), isPaused(false) {}
 
 void MediaStreamHandler::handleMediaStream() {
+    // ssrc 할당
     Protos protos(utils::getRanNum(32));
 
+    // ALSA 준비
     snd_pcm_t* pcmHandle;
     snd_pcm_hw_params_t* params;
     int rc, dir;
@@ -39,51 +41,53 @@ void MediaStreamHandler::handleMediaStream() {
     Protos::SenderReport sr;
     Protos::RTPHeader rtpHeader;
 
+    // ALSA 초기화
     initAlsa(pcmHandle, params, rc, sampleRate, dir);
+
     if (rc < 0) {
         fprintf(stderr, "ALSA initialization failed\n");
         return;
     }
 
-    unique_lock<mutex> lock(mtx);
-
     while (isStreaming) {
-        // 스트리밍을 시작하는 신호를 기다림
-        condition.wait(lock, [this] { return !isPaused || !isStreaming; });
-
         if (!isStreaming) break;  // TEARDOWN 요청 시 종료
 
-        if (!isPaused) {
-            unsigned char rtpPacket[sizeof(Protos::RTPHeader) + payloadSize];
+        // rtp 패킷 선언
+        unsigned char rtpPacket[sizeof(Protos::RTPHeader) + payloadSize];
 
-            if (captureAudio(pcmHandle, buffer, frames, rc, payload) < 0) {
-                cerr << "오디오 캡처 실패..." << endl;
-                break;
-            }
+        // 오디오 캡처
+        if (captureAudio(pcmHandle, buffer, frames, rc, payload) < 0) {
+            cerr << "오디오 캡처 실패..." << endl;
+            break;
+        }
 
-            memset(rtpPacket, 0, sizeof(rtpPacket));
-            protos.createRTPHeader(&rtpHeader, seqNum, timestamp);
-            memcpy(rtpPacket, &rtpHeader, sizeof(rtpHeader));
-            memcpy(rtpPacket + sizeof(rtpHeader), payload, payloadSize);
+        // rtp 패킷 내용 채우기
+        memset(rtpPacket, 0, sizeof(rtpPacket));
+        protos.createRTPHeader(&rtpHeader, seqNum, timestamp);
+        memcpy(rtpPacket, &rtpHeader, sizeof(rtpHeader));
+        memcpy(rtpPacket + sizeof(rtpHeader), payload, payloadSize);
 
-	        cout << "RTP " << packetCount << " sent" << endl;
+        cout << "RTP " << packetCount << " sent" << endl;
 
-            udpHandler.sendRTPPacket(rtpPacket, sizeof(rtpPacket));
+        // rtp 패킷 전송
+        udpHandler.sendRTPPacket(rtpPacket, sizeof(rtpPacket));
 
-            seqNum++;
-            timestamp += payloadSize;
-            packetCount++;
-            octetCount += payloadSize;
+        // 통계 데이터 업데이트
+        seqNum++;
+        timestamp += payloadSize;
+        packetCount++;
+        octetCount += payloadSize;
 
-            if (packetCount % 10 == 0) {
-                cout << "RTCP sent" << endl;
-                protos.createSR(&sr, timestamp, packetCount, octetCount);
-                udpHandler.sendSenderReport(&sr, sizeof(sr));
-                udpHandler.recvReceiverReport();
-            }
-	    }
-        this_thread::sleep_for(std::chrono::milliseconds(20));
+        // rtp 패킷 백 번에 한 번씩 rtcp(SR) 생성 및 전송 (+RR받기?)
+        if (packetCount % 100 == 0) {
+            cout << "RTCP sent" << endl;
+            protos.createSR(&sr, timestamp, packetCount, octetCount);
+            udpHandler.sendSenderReport(&sr, sizeof(sr));
+            udpHandler.recvReceiverReport();
+        }
     }
+    // 루프가 너무 빨리 반복되지 않도록 잠시 대기 (rtsp 요청 반영 위함)
+    this_thread::sleep_for(std::chrono::milliseconds(20));
 }
 
 unsigned char MediaStreamHandler::linearToUlaw(int sample) {
@@ -173,13 +177,12 @@ int MediaStreamHandler::captureAudio(snd_pcm_t*& pcmHandle, short*& buffer, int&
 }
 
 void MediaStreamHandler::setCmd(const string& cmd) {
+    // 뮤텍스를 사용해 간섭 방지
     lock_guard<mutex> lock(mtx);
     if (cmd == "PLAY") {
         isStreaming = true;
         isPaused = false;
-    } else if (cmd == "PAUSE")
-        isPaused = true;
-    else if (cmd == "TEARDOWN")
+    } else if (cmd == "TEARDOWN")
         isStreaming = false;
     condition.notify_all();
 }

@@ -4,7 +4,7 @@ CMake Error at /Applications/CLion.app/Contents/bin/cmake/mac/aarch64/share/cmak
 Call Stack (most recent call first):
   /Applications/CLion.app/Contents/bin/cmake/mac/aarch64/share/cmake-3.29/Modules/FindPackageHandleStandardArgs.cmake:600 (_FPHSA_FAILURE_MESSAGE)
   /Applications/CLion.app/Contents/bin/cmake/mac/aarch64/share/cmake-3.29/Modules/FindALSA.cmake:62 (FIND_PACKAGE_HANDLE_STANDARD_ARGS)
-  CMakeLists.txt:21 (find_package)
+  CMakeLists.txt:19 (find_package)
 
 
 -- Configuring incomplete, errors occurred!

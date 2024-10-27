@@ -33,8 +33,6 @@ private:
 
     void handlePlayRequest(int clientSocket, int cseq, ClientSession* session);
 
-    void handlePauseRequest(int clientSocket, int cseq, ClientSession* session);
-
     void handleTeardownRequest(int clientSocket, int cseq, ClientSession* session);
 };
 
