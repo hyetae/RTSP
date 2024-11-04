@@ -1,4 +1,4 @@
-/Applications/CLion.app/Contents/bin/cmake/mac/aarch64/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=/Applications/CLion.app/Contents/bin/ninja/mac/aarch64/ninja -G Ninja -S /Users/yunhyegyeong/Documents/VEDA/RTSP -B /Users/yunhyegyeong/Documents/VEDA/RTSP/cmake-build-debug
+/Applications/CLion.app/Contents/bin/cmake/mac/aarch64/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G "Unix Makefiles" -S /Users/yunhyegyeong/Documents/RTSP -B /Users/yunhyegyeong/Documents/RTSP/cmake-build-debug
 CMake Error at /Applications/CLion.app/Contents/bin/cmake/mac/aarch64/share/cmake-3.29/Modules/FindPackageHandleStandardArgs.cmake:230 (message):
   Could NOT find ALSA (missing: ALSA_LIBRARY ALSA_INCLUDE_DIR)
 Call Stack (most recent call first):

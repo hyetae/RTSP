@@ -86,12 +86,13 @@ pair<int, int> RequestHandler::parsePorts(const string& request) {
             while (getline(lineStream, label, '/')) {
                 string portRange;
                 getline(lineStream, portRange);
+                size_t eqPos = portRange.find('=') + 1;
                 size_t dashPos = portRange.find('-');
 
                 if (dashPos != string::npos) {
-                    int rtpPort = stoi(portRange.substr(0, dashPos));
+                    int rtpPort = stoi(portRange.substr(eqPos, dashPos - eqPos));
                     int rtcpPort = stoi(portRange.substr(dashPos + 1));
-		    return {rtpPort, rtcpPort};
+                    return {rtpPort, rtcpPort};
                 }
             }
         }
