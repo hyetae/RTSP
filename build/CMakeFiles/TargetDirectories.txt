@@ -1,3 +1,3 @@
-/home/hyetae/rtsp/build/CMakeFiles/rtsp.dir
-/home/hyetae/rtsp/build/CMakeFiles/edit_cache.dir
-/home/hyetae/rtsp/build/CMakeFiles/rebuild_cache.dir
+/Projects/RTSP/build/CMakeFiles/rtsp.dir
+/Projects/RTSP/build/CMakeFiles/edit_cache.dir
+/Projects/RTSP/build/CMakeFiles/rebuild_cache.dir

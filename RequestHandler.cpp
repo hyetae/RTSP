@@ -158,6 +158,7 @@ void RequestHandler::handleSetupRequest(int clientSocket, int cseq, ClientSessio
     }
 
     udpHandler.setUDPPort(ports.first, ports.second);
+    udpHandler.createUDPSocket();
 
     string response = "RTSP/1.0 200 OK\r\n"
                            "CSeq: " + to_string(cseq) + "\r\n"

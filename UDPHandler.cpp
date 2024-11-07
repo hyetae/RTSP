@@ -51,7 +51,7 @@ void UDPHandler::createUDPSocket() {
     memset(&serverRTCPAddr, 0, sizeof(serverRTCPAddr));
     serverRTCPAddr.sin_family = AF_INET;
     serverRTCPAddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    serverRTCPAddr.sin_port = serverRTCPPort;
+    serverRTCPAddr.sin_port = htons(serverRTCPPort);
 
     // client rtcp
     memset(&clientRTCPAddr, 0, sizeof(clientRTCPAddr));
