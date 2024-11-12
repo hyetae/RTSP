@@ -161,8 +161,7 @@ void RequestHandler::handleSetupRequest(int clientSocket, int cseq, ClientSessio
                              "\r\n";
     TCP->sendRTSPResponse(clientSocket, response);
 
-    thread mediaStreamThread(&MediaStreamHandler::handleMediaStream, &mediaStreamHandler);
-    mediaStreamThread.detach();
+    mediaStreamHandler.setupStream();
 }
 
 void RequestHandler::handlePlayRequest(int clientSocket, int cseq, ClientSession* session) {
@@ -176,6 +175,10 @@ void RequestHandler::handlePlayRequest(int clientSocket, int cseq, ClientSession
     TCP->sendRTSPResponse(clientSocket, response);
 
     mediaStreamHandler.setCmd("PLAY");
+    
+    
+    thread mediaStreamThread(&MediaStreamHandler::playStreaming, &mediaStreamHandler);
+    mediaStreamThread.detach();
 }
 
 void RequestHandler::handlePauseRequest(int clientSocket, int cseq, ClientSession* session) {

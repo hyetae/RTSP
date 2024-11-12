@@ -17,27 +17,11 @@
 
 MediaStreamHandler::MediaStreamHandler(): isStreaming(false), isPaused(false) {}
 
-void MediaStreamHandler::handleMediaStream() {
+void MediaStreamHandler::setupStream() {
     Protos protos(utils::getRanNum(32));
 
-    snd_pcm_t* pcmHandle;
-    snd_pcm_hw_params_t* params;
-    int rc, dir;
-
-    size_t payloadSize = 160;  // 20ms당 160 샘플
-    int frames = payloadSize;  // G.711은 8kHz에서 20ms당 160 샘플
+    payloadSize = 160;  // G.711의 경우 20ms당 160 샘플
     unsigned int sampleRate = 8000 ; // G.711의 샘플링 레이트
-
-    auto buffer = new short[payloadSize];
-    auto payload = new unsigned char[payloadSize];
-
-    unsigned int octetCount = 0;
-    unsigned int packetCount = 0;
-    unsigned short seqNum = (unsigned short)utils::getRanNum(16);
-    unsigned int timestamp = (unsigned int)utils::getRanNum(16);
-
-    Protos::SenderReport sr;
-    Protos::RTPHeader rtpHeader;
 
     initAlsa(pcmHandle, params, rc, sampleRate, dir);
     if (rc < 0) {
@@ -46,6 +30,21 @@ void MediaStreamHandler::handleMediaStream() {
     }
 
     // std::unique_lock<std::mutex> lock(mtx);
+}
+
+void MediaStreamHandler::playStreaming() {
+    int frames = payloadSize;
+
+    auto buffer = new short[payloadSize];
+    auto payload = new unsigned char[payloadSize];
+
+    Protos::SenderReport sr;
+    Protos::RTPHeader rtpHeader;
+    
+    unsigned int octetCount = 0;
+    unsigned int packetCount = 0;
+    unsigned short seqNum = (unsigned short)utils::getRanNum(16);
+    unsigned int timestamp = (unsigned int)utils::getRanNum(16);
 
     while (isStreaming) {
         // wait for streaming start sign 

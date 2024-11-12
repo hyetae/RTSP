@@ -12,7 +12,8 @@ class MediaStreamHandler {
 public:
     MediaStreamHandler();
 
-    void handleMediaStream();
+    void setupStream();
+    void playStreaming(); 
 
     unsigned char linearToUlaw(int sample);
     void initAlsa(snd_pcm_t*& pcmHandle, snd_pcm_hw_params_t*& params, int& rc, unsigned int& sampleRate, int& dir);
@@ -23,6 +24,12 @@ public:
 private:
     std::atomic<bool> isStreaming;
     std::atomic<bool> isPaused;
+    
+    // G.711 stream param
+    snd_pcm_t* pcmHandle;
+    snd_pcm_hw_params_t* params;
+    size_t payloadSize = 0;
+    int rc, dir;
 
     std::mutex mtx;
     std::condition_variable condition; // condition variable for streaming state controll
