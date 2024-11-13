@@ -8,12 +8,17 @@
 #include <alsa/asoundlib.h>
 #include <condition_variable>
 
+typedef enum {
+    eMediaStream_Play,
+    eMediaStream_Pause,
+    eMediaStream_Teardown,
+} MediaStreamState;
+
 class MediaStreamHandler {
 public:
     MediaStreamHandler();
 
-    void setupStream();
-    void playStreaming(); 
+    void handleMediaStream();
 
     unsigned char linearToUlaw(int sample);
     void initAlsa(snd_pcm_t*& pcmHandle, snd_pcm_hw_params_t*& params, int& rc, unsigned int& sampleRate, int& dir);
@@ -22,8 +27,9 @@ public:
     void setCmd(const std::string& cmd);
 
 private:
-    std::atomic<bool> isStreaming;
-    std::atomic<bool> isPaused;
+    MediaStreamState streamState;
+    std::mutex streamMutex;
+    std::condition_variable condition; // condition variable for streaming state controll
     
     // G.711 stream param
     snd_pcm_t* pcmHandle;
@@ -31,8 +37,6 @@ private:
     size_t payloadSize = 0;
     int rc, dir;
 
-    std::mutex mtx;
-    std::condition_variable condition; // condition variable for streaming state controll
 };
 
 #endif //RTSP_MEDIASTREAMHANDLER_H

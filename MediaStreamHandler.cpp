@@ -15,9 +15,9 @@
 #include <utility>
 #include <random>
 
-MediaStreamHandler::MediaStreamHandler(): isStreaming(false), isPaused(false) {}
+MediaStreamHandler::MediaStreamHandler(): isPaused(false) {}
 
-void MediaStreamHandler::setupStream() {
+void MediaStreamHandler::handleMediaStream() {
     Protos protos(utils::getRanNum(32));
 
     payloadSize = 160;  // G.711의 경우 20ms당 160 샘플
@@ -29,10 +29,6 @@ void MediaStreamHandler::setupStream() {
         return;
     }
 
-    // std::unique_lock<std::mutex> lock(mtx);
-}
-
-void MediaStreamHandler::playStreaming() {
     int frames = payloadSize;
 
     auto buffer = new short[payloadSize];
@@ -40,22 +36,30 @@ void MediaStreamHandler::playStreaming() {
 
     Protos::SenderReport sr;
     Protos::RTPHeader rtpHeader;
-    
+
     unsigned int octetCount = 0;
     unsigned int packetCount = 0;
     unsigned short seqNum = (unsigned short)utils::getRanNum(16);
     unsigned int timestamp = (unsigned int)utils::getRanNum(16);
 
-    while (isStreaming) {
-        // wait for streaming start sign 
-        // condition.wait(lock, [this] { return !isPaused || !isStreaming; });
-
-        if (!isStreaming) break;  // TEARDOWN 요청 시 종료
-
-        if (!isPaused) {
+    while (1)
+    {
+        if (streamState == MediaStreamState::eMediaStream_Pause)
+        {
+            std::unique_lock<std::mutex> lck(streamMutex);
+            condition.wait(lck);
+        }
+        else if (streamState == MediaStreamState::eMediaStream_Teardown)
+        {
+            break;
+        }
+        else if (streamState == MediaStreamState::eMediaStream_Play)
+        {
+            // data capture and send to client.
             unsigned char rtpPacket[sizeof(Protos::RTPHeader) + payloadSize];
 
-            if (captureAudio(pcmHandle, buffer, frames, rc, payload) < 0) {
+            if (captureAudio(pcmHandle, buffer, frames, rc, payload) < 0)
+            {
                 std::cerr << "Error: fail to capture audio" << std::endl;
                 break;
             }
@@ -65,7 +69,7 @@ void MediaStreamHandler::playStreaming() {
             memcpy(rtpPacket, &rtpHeader, sizeof(rtpHeader));
             memcpy(rtpPacket + sizeof(rtpHeader), payload, payloadSize);
 
-	        std::cout << "RTP " << packetCount << " sent" << std::endl;
+            std::cout << "RTP " << packetCount << " sent" << std::endl;
 
             SOCK.sendRTPPacket(rtpPacket, sizeof(rtpPacket));
 
@@ -74,12 +78,13 @@ void MediaStreamHandler::playStreaming() {
             packetCount++;
             octetCount += payloadSize;
 
-            if (packetCount % 100 == 0) {
+            if (packetCount % 100 == 0)
+            {
                 std::cout << "RTCP sent" << std::endl;
                 protos.createSR(&sr, timestamp, packetCount, octetCount);
                 SOCK.sendSenderReport(&sr, sizeof(sr));
             }
-	    }
+        }
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
 }
@@ -171,13 +176,12 @@ int MediaStreamHandler::captureAudio(snd_pcm_t*& pcmHandle, short*& buffer, int&
 }
 
 void MediaStreamHandler::setCmd(const std::string& cmd) {
-    std::lock_guard<std::mutex> lock(mtx);
     if (cmd == "PLAY") {
-        isStreaming = true;
-        isPaused = false;
-    } else if (cmd == "PAUSE")
-        isPaused = true;
-    else if (cmd == "TEARDOWN")
-        isStreaming = false;
-    condition.notify_all();
+        streamState = MediaStreamState::eMediaStream_Play;
+        condition.notify_one();
+    } else if (cmd == "PAUSE") {
+        streamState = MediaStreamState::eMediaStream_Pause;
+    } else if (cmd == "TEARDOWN") {
+        streamState = MediaStreamState::eMediaStream_Teardown;
+    }
 }

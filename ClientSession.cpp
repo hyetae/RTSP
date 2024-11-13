@@ -21,7 +21,7 @@ void ClientSession::setPort(int port1, int port2) {
 }
 
 void ClientSession::setState(const std::string& newState) {
-    std::lock_guard<std::mutex> lock(mtx);
+    std::lock_guard<std::mutex> lock(stateMutex);
     state = newState;
     version++;
 }
